@@ -6,7 +6,7 @@ import org.springframework.test.context.TestPropertySource;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:h2:mem:testdb",
+        "spring.datasource.url=jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1",
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.datasource.username=sa",
         "spring.datasource.password=",
@@ -14,6 +14,7 @@ import org.springframework.test.context.TestPropertySource;
         "spring.jpa.hibernate.ddl-auto=create-drop",
         "eureka.client.enabled=false",
         "spring.cloud.discovery.enabled=false",
+        "spring.cloud.config.enabled=false",
         "jwt.secret=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
         "jwt.expiration=86400000"
 })
