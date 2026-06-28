@@ -1,0 +1,31 @@
+# Maven
+**/target/
+*.jar
+*.war
+*.class
+
+# Node
+**/node_modules/
+**/dist/
+**/.env
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# Docker
+**/.dockerignore
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets — never commit these
+secrets.yaml
+.env
