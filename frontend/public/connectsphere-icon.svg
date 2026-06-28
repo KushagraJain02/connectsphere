@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 680 680">
+
+  <defs>
+    <clipPath id="circleClip">
+      <circle cx="340" cy="320" r="210"/>
+    </clipPath>
+  </defs>
+
+  <rect x="80" y="60" width="520" height="520" rx="120" fill="#e879f9"/>
+
+  <ellipse cx="340" cy="320" r="210" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.25"/>
+  <ellipse cx="340" cy="320" rx="210" ry="80" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity="0.2"/>
+  <ellipse cx="340" cy="320" rx="80" ry="210" fill="none" stroke="#ffffff" stroke-width="2" stroke-opacity="0.2"/>
+
+  <line x1="130" y1="320" x2="550" y2="320" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.18" clip-path="url(#circleClip)"/>
+  <line x1="340" y1="110" x2="340" y2="530" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.18" clip-path="url(#circleClip)"/>
+
+  <line x1="200" y1="185" x2="480" y2="455" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.12" clip-path="url(#circleClip)"/>
+  <line x1="480" y1="185" x2="200" y2="455" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.12" clip-path="url(#circleClip)"/>
+
+  <line x1="340" y1="165" x2="480" y2="295" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.55"/>
+  <line x1="340" y1="165" x2="200" y2="295" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.55"/>
+  <line x1="480" y1="295" x2="420" y2="455" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.55"/>
+  <line x1="200" y1="295" x2="260" y2="455" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.55"/>
+  <line x1="420" y1="455" x2="260" y2="455" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.55"/>
+  <line x1="480" y1="295" x2="200" y2="295" stroke="#ffffff" stroke-width="1.8" stroke-opacity="0.55"/>
+
+  <circle cx="340" cy="165" r="22" fill="#ffffff"/>
+  <circle cx="480" cy="295" r="18" fill="#ffffff" fill-opacity="0.9"/>
+  <circle cx="200" cy="295" r="18" fill="#ffffff" fill-opacity="0.9"/>
+  <circle cx="420" cy="455" r="16" fill="#ffffff" fill-opacity="0.8"/>
+  <circle cx="260" cy="455" r="16" fill="#ffffff" fill-opacity="0.8"/>
+
+  <circle cx="340" cy="165" r="11" fill="#e879f9"/>
+  <circle cx="480" cy="295" r="9" fill="#e879f9"/>
+  <circle cx="200" cy="295" r="9" fill="#e879f9"/>
+  <circle cx="420" cy="455" r="8" fill="#e879f9"/>
+  <circle cx="260" cy="455" r="8" fill="#e879f9"/>
+
+</svg>

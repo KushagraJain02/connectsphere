@@ -1,0 +1,267 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: connectsphere-postgres
+    environment:
+      POSTGRES_USER: postgres           # ← changed
+      POSTGRES_PASSWORD: postgre        # ← changed
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    networks:
+      - connectsphere-network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]   # ← changed
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+  config-server:
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - connectsphere-network
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8888/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - connectsphere-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      config-server:
+        condition: service_healthy
+    networks:
+      - connectsphere-network
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_started
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      CLOUDINARY_CLOUD_NAME: dvdhpvwaq
+      CLOUDINARY_API_KEY: 251374278598845
+      CLOUDINARY_API_SECRET: ULHNtzz5kOHG6c752ODOlUyY27k
+
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+    networks:
+      - connectsphere-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - connectsphere-network
+
+  post-service:
+    build: ./post-service
+    container_name: post-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - postgres
+      - eureka-server
+      - kafka
+      - config-server
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/post_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CLOUDINARY_CLOUD_NAME: dvdhpvwaq
+      CLOUDINARY_API_KEY: 251374278598845
+      CLOUDINARY_API_SECRET: ULHNtzz5kOHG6c752ODOlUyY27k
+
+
+  connection-service:
+    build: ./connection-service
+    container_name: connection-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - postgres
+      - eureka-server
+      - kafka
+      - config-server
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/connection_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - connectsphere-network
+
+  messaging-service:
+    build: ./messaging-service
+    container_name: messaging-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      - postgres
+      - eureka-server
+      - kafka
+      - redis
+      - config-server
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/messaging_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - postgres
+      - eureka-server
+      - kafka
+      - config-server
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      SPRING_MAIL_USERNAME: kushagrabvbpn0879@gmail.com
+      SPRING_MAIL_PASSWORD: xwnponjndyohqfzx
+
+  job-service:
+    build: ./job-service
+    container_name: job-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      - postgres
+      - eureka-server
+      - kafka
+      - config-server
+    networks:
+      - connectsphere-network
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/job_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgre
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+
+networks:
+  connectsphere-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  kafka_data:
+  zookeeper_data:

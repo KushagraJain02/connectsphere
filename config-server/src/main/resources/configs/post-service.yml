@@ -1,0 +1,27 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: post-service
+  datasource:
+    url: jdbc:postgresql://postgres:5432/post_db
+    username: postgres
+    password: postgre
+    driver-class-name: org.postgresql.Driver
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+
+cloudinary:
+  cloud-name: dvdhpvwaq
+  api-key: 251374278598845
+  api-secret: ULHNtzz5kOHG6c752ODOlUyY27k
