@@ -27,5 +27,7 @@ logs/
 Thumbs.db
 
 # Secrets — never commit these
-secrets.yaml
+k8s/secrets.local.yaml
+k8s/secrets.yaml
+**/.env
 .env
