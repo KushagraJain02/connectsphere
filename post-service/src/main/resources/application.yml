@@ -6,8 +6,8 @@ spring:
     name: post-service
   datasource:
     url: jdbc:postgresql://postgres:5432/post_db
-    username: postgres
-    password: postgre
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -36,9 +36,9 @@ spring:
     time-zone: UTC
 
 cloudinary:
-  cloud-name: dvdhpvwaq
-  api-key: 251374278598845
-  api-secret: ULHNtzz5kOHG6c752ODOlUyY27k
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
 
 eureka:
   client:

@@ -4,8 +4,8 @@ services:
     image: postgres:16-alpine
     container_name: connectsphere-postgres
     environment:
-      POSTGRES_USER: postgres           # ← changed
-      POSTGRES_PASSWORD: postgre        # ← changed
+      POSTGRES_USER: ${POSTGRES_USER}           # ← changed
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}        # ← changed
     ports:
       - "5432:5432"
     volumes:
@@ -67,7 +67,7 @@ services:
       - connectsphere-network
     environment:
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      JWT_SECRET: ${JWT_SECRET}
 
   auth-service:
     build: ./auth-service
@@ -85,8 +85,8 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/auth_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
 
 
@@ -106,12 +106,12 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/user_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
-      CLOUDINARY_CLOUD_NAME: dvdhpvwaq
-      CLOUDINARY_API_KEY: 251374278598845
-      CLOUDINARY_API_SECRET: ULHNtzz5kOHG6c752ODOlUyY27k
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
 
 
   zookeeper:
@@ -157,13 +157,13 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/post_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      CLOUDINARY_CLOUD_NAME: dvdhpvwaq
-      CLOUDINARY_API_KEY: 251374278598845
-      CLOUDINARY_API_SECRET: ULHNtzz5kOHG6c752ODOlUyY27k
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
 
 
   connection-service:
@@ -180,8 +180,8 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/connection_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
@@ -209,8 +209,8 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/messaging_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SPRING_DATA_REDIS_HOST: redis
@@ -231,12 +231,12 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notification_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_MAIL_USERNAME: kushagrabvbpn0879@gmail.com
-      SPRING_MAIL_PASSWORD: xwnponjndyohqfzx
+      SPRING_MAIL_USERNAME: ${MAIL_USERNAME}@gmail.com
+      SPRING_MAIL_PASSWORD: ${MAIL_PASSWORD}
 
   job-service:
     build: ./job-service
@@ -252,8 +252,8 @@ services:
       - connectsphere-network
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/job_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgre
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
 
