@@ -4,7 +4,7 @@ metadata:
   name: api-gateway
   namespace: connectsphere
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: api-gateway
@@ -30,6 +30,16 @@ spec:
                 configMapKeyRef:
                   name: connectsphere-config
                   key: JWT_SECRET
+            - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: connectsphere-config
+                  key: HIKARI_MAX_POOL_SIZE
+            - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+              valueFrom:
+                configMapKeyRef:
+                  name: connectsphere-config
+                  key: HIKARI_MIN_IDLE
           readinessProbe:
             httpGet:
               path: /actuator/health

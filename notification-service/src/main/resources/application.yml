@@ -5,7 +5,7 @@ spring:
   application:
     name: notification-service
   datasource:
-    url: jdbc:postgresql://postgres:5432/notification_db
+    url: jdbc:postgresql://postgres:5433/notification_db
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -57,4 +57,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}

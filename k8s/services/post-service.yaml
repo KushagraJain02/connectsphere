@@ -4,7 +4,7 @@ metadata:
   name: post-service
   namespace: connectsphere
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: post-service
@@ -16,7 +16,7 @@ spec:
       initContainers:
         - name: wait-for-postgres
           image: busybox:1.35
-          command: ['sh', '-c', 'until nc -z postgres 5432; do echo waiting for postgres; sleep 3; done']
+          command: ['sh', '-c', 'until nc -z postgres 5433; do echo waiting for postgres; sleep 3; done']
         - name: wait-for-kafka
           image: busybox:1.35
           command: ['sh', '-c', 'until nc -z kafka 9092; do echo waiting for kafka; sleep 5; done']
@@ -28,7 +28,7 @@ spec:
             - containerPort: 8083
           env:
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:postgresql://postgres:5432/post_db
+              value: jdbc:postgresql://postgres:5433/post_db
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 configMapKeyRef:
@@ -64,6 +64,16 @@ spec:
                 secretKeyRef:
                   name: connectsphere-secrets
                   key: CLOUDINARY_API_SECRET
+            - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: connectsphere-config
+                  key: HIKARI_MAX_POOL_SIZE
+            - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+              valueFrom:
+                configMapKeyRef:
+                  name: connectsphere-config
+                  key: HIKARI_MIN_IDLE
           readinessProbe:
             httpGet:
               path: /actuator/health

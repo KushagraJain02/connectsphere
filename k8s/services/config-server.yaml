@@ -25,6 +25,16 @@ spec:
                 configMapKeyRef:
                   name: connectsphere-config
                   key: EUREKA_URL
+            - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: connectsphere-config
+                  key: HIKARI_MAX_POOL_SIZE
+            - name: SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE
+              valueFrom:
+                configMapKeyRef:
+                  name: connectsphere-config
+                  key: HIKARI_MIN_IDLE
           readinessProbe:
             httpGet:
               path: /actuator/health

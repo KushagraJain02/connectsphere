@@ -58,6 +58,9 @@ spec:
               value: "60000"
             - name: KAFKA_ZOOKEEPER_CONNECTION_TIMEOUT_MS
               value: "60000"
+            # ── Critical fix: constrain JVM heap so it fits within pod memory limit ──
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xmx512M -Xms256M"
           readinessProbe:
             tcpSocket:
               port: 9092
@@ -72,11 +75,11 @@ spec:
             failureThreshold: 5
           resources:
             requests:
-              memory: "128Mi"
-              cpu: "100m"
-            limits:
-              memory: "384Mi"
+              memory: "768Mi"
               cpu: "300m"
+            limits:
+              memory: "1Gi"
+              cpu: "600m"
           volumeMounts:
             - name: kafka-storage
               mountPath: /var/lib/kafka/data
