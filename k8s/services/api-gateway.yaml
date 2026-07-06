@@ -27,8 +27,8 @@ spec:
                   key: EUREKA_URL
             - name: JWT_SECRET
               valueFrom:
-                configMapKeyRef:
-                  name: connectsphere-config
+                secretKeyRef:
+                  name: connectsphere-secrets
                   key: JWT_SECRET
             - name: SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE
               valueFrom:
