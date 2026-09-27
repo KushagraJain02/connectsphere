@@ -133,7 +133,19 @@ class PostServiceTest {
     @Test
     @DisplayName("Toggle like — adds like when not already liked")
     void toggleLike_AddsLike() {
-        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(mockPost));
+        // Post authored by someone else, since publishReactionEvent only fires
+        // a Kafka notification when the reactor is not the post's own author.
+        Post othersPost = Post.builder()
+                .id(POST_ID)
+                .authorId("other-author")
+                .authorName("Priya Singh")
+                .content("Test post content")
+                .type(Post.PostType.TEXT)
+                .likeCount(0)
+                .commentCount(0)
+                .build();
+
+        when(postRepository.findById(POST_ID)).thenReturn(Optional.of(othersPost));
         // First call (existence check inside toggleReaction) → no reaction yet.
         // Second call (buildReactionResponse, after save) → the new reaction is present.
         when(reactionRepository.findByPostIdAndUserId(POST_ID, USER_ID))
