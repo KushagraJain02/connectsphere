@@ -88,6 +88,7 @@ public class JobService {
                 .applicantEmail(applicantEmail)
                 .coverLetter(request.getCoverLetter())
                 .resumeUrl(request.getResumeUrl())
+                .status(JobApplication.ApplicationStatus.APPLIED)
                 .build();
 
         applicationRepository.save(application);
