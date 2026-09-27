@@ -6,11 +6,12 @@ import com.connectsphere.post.dto.CreatePostRequest;
 import com.connectsphere.post.dto.PostResponse;
 import com.connectsphere.post.dto.event.PostEvent;
 import com.connectsphere.post.entity.Comment;
-import com.connectsphere.post.entity.Like;
 import com.connectsphere.post.entity.Post;
+import com.connectsphere.post.entity.Reaction;
 import com.connectsphere.post.repository.CommentRepository;
 import com.connectsphere.post.repository.LikeRepository;
 import com.connectsphere.post.repository.PostRepository;
+import com.connectsphere.post.repository.ReactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +38,7 @@ class PostServiceTest {
     @Mock private PostRepository postRepository;
     @Mock private LikeRepository likeRepository;
     @Mock private CommentRepository commentRepository;
+    @Mock private ReactionRepository reactionRepository;
     @Mock private CloudinaryService cloudinaryService;
     @Mock private KafkaTemplate<String, PostEvent> kafkaTemplate;
 
@@ -102,6 +104,8 @@ class PostServiceTest {
 
         when(postRepository.findAllByOrderByCreatedAtDesc(any())).thenReturn(page);
         when(likeRepository.existsByPostIdAndUserId(any(), any())).thenReturn(false);
+        when(reactionRepository.countByTypeForPost(any())).thenReturn(List.of());
+        when(reactionRepository.findByPostIdAndUserId(any(), any())).thenReturn(Optional.empty());
 
         Page<PostResponse> result = postService.getFeed(USER_ID, 0, 10);
 
@@ -116,24 +120,39 @@ class PostServiceTest {
 
         when(postRepository.findAllByOrderByCreatedAtDesc(any())).thenReturn(page);
         when(likeRepository.existsByPostIdAndUserId(POST_ID, USER_ID)).thenReturn(true);
+        when(reactionRepository.countByTypeForPost(any())).thenReturn(List.of());
+        when(reactionRepository.findByPostIdAndUserId(any(), any())).thenReturn(Optional.empty());
 
         Page<PostResponse> result = postService.getFeed(USER_ID, 0, 10);
 
         assertThat(result.getContent().get(0).isLikedByMe()).isTrue();
     }
 
-    // ── Like Tests ─────────────────────────────────────────
+    // ── Like Tests (delegate to reaction system) ────────────
 
     @Test
     @DisplayName("Toggle like — adds like when not already liked")
     void toggleLike_AddsLike() {
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(mockPost));
-        when(likeRepository.existsByPostIdAndUserId(POST_ID, USER_ID)).thenReturn(false);
+        // First call (existence check inside toggleReaction) → no reaction yet.
+        // Second call (buildReactionResponse, after save) → the new reaction is present.
+        when(reactionRepository.findByPostIdAndUserId(POST_ID, USER_ID))
+                .thenReturn(
+                        Optional.empty(),
+                        Optional.of(Reaction.builder()
+                                .id("reaction-1")
+                                .postId(POST_ID)
+                                .userId(USER_ID)
+                                .userName("Rahul Sharma")
+                                .type(Reaction.ReactionType.LIKE)
+                                .build())
+                );
+        when(reactionRepository.countByTypeForPost(POST_ID)).thenReturn(List.of());
 
         String result = postService.toggleLike(POST_ID, USER_ID, "Rahul Sharma");
 
         assertThat(result).isEqualTo("liked");
-        verify(likeRepository).save(any(Like.class));
+        verify(reactionRepository).save(any(Reaction.class));
         verify(postRepository).incrementLikeCount(POST_ID);
         verify(kafkaTemplate).send(eq("post-events"), any(PostEvent.class));
     }
@@ -141,29 +160,43 @@ class PostServiceTest {
     @Test
     @DisplayName("Toggle like — removes like when already liked")
     void toggleLike_RemovesLike() {
-        Like existingLike = Like.builder().id("like-1").postId(POST_ID).userId(USER_ID).build();
+        Reaction existingReaction = Reaction.builder()
+                .id("reaction-1")
+                .postId(POST_ID)
+                .userId(USER_ID)
+                .userName("Rahul Sharma")
+                .type(Reaction.ReactionType.LIKE)
+                .build();
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(mockPost));
-        when(likeRepository.existsByPostIdAndUserId(POST_ID, USER_ID)).thenReturn(true);
-        when(likeRepository.findByPostIdAndUserId(POST_ID, USER_ID))
-                .thenReturn(Optional.of(existingLike));
+        // First call (existence check) → existing LIKE reaction present.
+        // Second call (buildReactionResponse, after delete) → no reaction left.
+        when(reactionRepository.findByPostIdAndUserId(POST_ID, USER_ID))
+                .thenReturn(Optional.of(existingReaction), Optional.empty());
+        when(reactionRepository.countByTypeForPost(POST_ID)).thenReturn(List.of());
 
         String result = postService.toggleLike(POST_ID, USER_ID, "Rahul Sharma");
 
         assertThat(result).isEqualTo("unliked");
-        verify(likeRepository).delete(existingLike);
+        verify(reactionRepository).delete(existingReaction);
         verify(postRepository).decrementLikeCount(POST_ID);
     }
 
     @Test
     @DisplayName("Toggle like — no Kafka event when unliking")
     void toggleLike_NoKafkaEventOnUnlike() {
-        Like existingLike = Like.builder().id("like-1").postId(POST_ID).userId(USER_ID).build();
+        Reaction existingReaction = Reaction.builder()
+                .id("reaction-1")
+                .postId(POST_ID)
+                .userId(USER_ID)
+                .userName("Rahul")
+                .type(Reaction.ReactionType.LIKE)
+                .build();
 
         when(postRepository.findById(POST_ID)).thenReturn(Optional.of(mockPost));
-        when(likeRepository.existsByPostIdAndUserId(POST_ID, USER_ID)).thenReturn(true);
-        when(likeRepository.findByPostIdAndUserId(POST_ID, USER_ID))
-                .thenReturn(Optional.of(existingLike));
+        when(reactionRepository.findByPostIdAndUserId(POST_ID, USER_ID))
+                .thenReturn(Optional.of(existingReaction), Optional.empty());
+        when(reactionRepository.countByTypeForPost(POST_ID)).thenReturn(List.of());
 
         postService.toggleLike(POST_ID, USER_ID, "Rahul");
 
@@ -222,6 +255,7 @@ class PostServiceTest {
         postService.deletePost(POST_ID, USER_ID);
 
         verify(postRepository).delete(mockPost);
+        verify(reactionRepository).deleteByPostId(POST_ID);
     }
 
     @Test
