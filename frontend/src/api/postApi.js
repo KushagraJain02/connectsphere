@@ -11,3 +11,14 @@ export const toggleLike = (postId) => api.post(`/posts/${postId}/like`);
 export const addComment = (postId, data) => api.post(`/posts/${postId}/comments`, data);
 export const getComments = (postId) => api.get(`/posts/${postId}/comments`);
 export const deletePost = (postId) => api.delete(`/posts/${postId}`);
+export const reactToPost = (postId, type) =>
+    api.post(`/posts/${postId}/react?type=${type}`);
+
+export const getReactions = (postId) =>
+    api.get(`/posts/${postId}/reactions`);
+
+export const getPostsByHashtag = (tag, page = 0) =>
+    api.get(`/posts/hashtag/${tag}?page=${page}`);
+
+export const getTrendingHashtags = () =>
+    api.get('/posts/trending-hashtags');

@@ -4,17 +4,19 @@ import com.connectsphere.post.dto.*;
 import com.connectsphere.post.dto.event.PostEvent;
 import com.connectsphere.post.entity.*;
 import com.connectsphere.post.repository.*;
+import com.connectsphere.post.util.HashtagExtractor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -25,8 +27,11 @@ public class PostService {
     private final PostRepository postRepository;
     private final LikeRepository likeRepository;
     private final CommentRepository commentRepository;
+    private final ReactionRepository reactionRepository;
     private final CloudinaryService cloudinaryService;
     private final KafkaTemplate<String, PostEvent> kafkaTemplate;
+
+    // ── Create Post ───────────────────────────────────────
 
     public PostResponse createPost(String userId, String authorName,
                                    CreatePostRequest request,
@@ -36,11 +41,14 @@ public class PostService {
             type = Post.PostType.valueOf(request.getType().toUpperCase());
         }
 
+        List<String> hashtags = HashtagExtractor.extract(request.getContent());
+
         Post post = Post.builder()
                 .authorId(userId)
                 .authorName(authorName)
                 .content(request.getContent())
                 .type(type)
+                .hashtags(hashtags)
                 .build();
 
         if (image != null && !image.isEmpty()) {
@@ -52,7 +60,6 @@ public class PostService {
 
         Post saved = postRepository.save(post);
 
-        // Publish Kafka event
         kafkaTemplate.send("post-events", PostEvent.builder()
                 .eventType("POST_CREATED")
                 .postId(saved.getId())
@@ -66,53 +73,83 @@ public class PostService {
         return PostResponse.fromEntity(saved, false);
     }
 
+    // ── Feed ─────────────────────────────────────────────
+
     public Page<PostResponse> getFeed(String userId, int page, int size) {
-        return postRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size))
-                .map(post -> PostResponse.fromEntity(post,
-                        likeRepository.existsByPostIdAndUserId(post.getId(), userId)));
+        return postRepository
+                .findAllByOrderByCreatedAtDesc(PageRequest.of(page, size))
+                .map(post -> buildPostResponse(post, userId));
     }
+
+    // ── User Posts ────────────────────────────────────────
 
     public List<PostResponse> getUserPosts(String userId, String viewerId) {
         return postRepository.findByAuthorIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(post -> PostResponse.fromEntity(post,
-                        likeRepository.existsByPostIdAndUserId(post.getId(), viewerId)))
+                .map(post -> buildPostResponse(post, viewerId))
                 .collect(Collectors.toList());
     }
 
+    // ── Single Post ───────────────────────────────────────
+
     public PostResponse getPost(String postId, String userId) {
         Post post = findPostById(postId);
-        return PostResponse.fromEntity(post,
-                likeRepository.existsByPostIdAndUserId(postId, userId));
+        return buildPostResponse(post, userId);
     }
 
-    public String toggleLike(String postId, String userId, String userName) {
-        Post post = findPostById(postId);
+    // ── Reactions ─────────────────────────────────────────
 
-        if (likeRepository.existsByPostIdAndUserId(postId, userId)) {
-            Like like = likeRepository.findByPostIdAndUserId(postId, userId).get();
-            likeRepository.delete(like);
-            postRepository.decrementLikeCount(postId);
-            return "unliked";
+    @Transactional
+    public ReactionResponse toggleReaction(String postId, String userId,
+                                           String userName, String reactionType) {
+        findPostById(postId); // validate exists
+
+        Reaction.ReactionType type = Reaction.ReactionType.valueOf(reactionType);
+        Optional<Reaction> existing = reactionRepository
+                .findByPostIdAndUserId(postId, userId);
+
+        if (existing.isPresent()) {
+            if (existing.get().getType() == type) {
+                // Same reaction → toggle off
+                reactionRepository.delete(existing.get());
+                postRepository.decrementLikeCount(postId);
+            } else {
+                // Different reaction → update
+                existing.get().setType(type);
+                reactionRepository.save(existing.get());
+
+                // Publish Kafka event for the new reaction type
+                publishReactionEvent(postId, userId, userName, type);
+            }
         } else {
-            likeRepository.save(Like.builder()
+            // New reaction
+            reactionRepository.save(Reaction.builder()
                     .postId(postId)
                     .userId(userId)
+                    .userName(userName)
+                    .type(type)
                     .build());
             postRepository.incrementLikeCount(postId);
-
-            // Notify post author
-            kafkaTemplate.send("post-events", PostEvent.builder()
-                    .eventType("POST_LIKED")
-                    .postId(postId)
-                    .authorId(post.getAuthorId())
-                    .actorId(userId)
-                    .actorName(userName)
-                    .build());
-
-            return "liked";
+            publishReactionEvent(postId, userId, userName, type);
         }
+
+        return buildReactionResponse(postId, userId);
     }
+
+    public ReactionResponse getReactions(String postId, String userId) {
+        return buildReactionResponse(postId, userId);
+    }
+
+    // ── Legacy Like (kept for backward compat) ────────────
+
+    @Transactional
+    public String toggleLike(String postId, String userId, String userName) {
+        // Delegate to reaction system using LIKE type
+        ReactionResponse response = toggleReaction(postId, userId, userName, "LIKE");
+        return response.getMyReaction() != null ? "liked" : "unliked";
+    }
+
+    // ── Comments ──────────────────────────────────────────
 
     public CommentResponse addComment(String postId, String userId,
                                       String authorName, CommentRequest request) {
@@ -130,7 +167,6 @@ public class PostService {
 
         Post post = findPostById(postId);
 
-        // Notify post author
         kafkaTemplate.send("post-events", PostEvent.builder()
                 .eventType("POST_COMMENTED")
                 .postId(postId)
@@ -150,6 +186,8 @@ public class PostService {
                 .collect(Collectors.toList());
     }
 
+    // ── Delete Post ───────────────────────────────────────
+
     public void deletePost(String postId, String userId) throws IOException {
         Post post = findPostById(postId);
 
@@ -161,11 +199,92 @@ public class PostService {
             cloudinaryService.deleteImage(post.getImagePublicId());
         }
 
+        // Clean up reactions and likes for this post
+        reactionRepository.deleteByPostId(postId);
+
         postRepository.delete(post);
+    }
+
+    // ── Private Helpers ───────────────────────────────────
+
+    private PostResponse buildPostResponse(Post post, String userId) {
+        boolean likedByMe = likeRepository
+                .existsByPostIdAndUserId(post.getId(), userId);
+
+        ReactionResponse reactions = buildReactionResponse(post.getId(), userId);
+
+        return PostResponse.fromEntity(
+                post,
+                likedByMe,
+                reactions.getMyReaction(),
+                reactions.getTotalReactions(),
+                reactions.getCounts()
+        );
+    }
+
+    private ReactionResponse buildReactionResponse(String postId, String userId) {
+        // Get all reaction counts grouped by type
+        List<Object[]> rawCounts = reactionRepository
+                .countByTypeForPost(postId);
+
+        Map<String, Long> countMap = new LinkedHashMap<>();
+        int total = 0;
+        for (Object[] row : rawCounts) {
+            String typeName = row[0].toString();
+            Long count = (Long) row[1];
+            countMap.put(typeName, count);
+            total += count;
+        }
+
+        // Get this user's reaction
+        String myReaction = reactionRepository
+                .findByPostIdAndUserId(postId, userId)
+                .map(r -> r.getType().name())
+                .orElse(null);
+
+        return ReactionResponse.builder()
+                .myReaction(myReaction)
+                .totalReactions(total)
+                .counts(countMap)
+                .build();
+    }
+
+    private void publishReactionEvent(String postId, String userId,
+                                      String userName,
+                                      Reaction.ReactionType type) {
+        Post post = findPostById(postId);
+
+        // Only notify if reacting to someone else's post
+        if (!post.getAuthorId().equals(userId)) {
+            kafkaTemplate.send("post-events", PostEvent.builder()
+                    .eventType("POST_LIKED")
+                    .postId(postId)
+                    .authorId(post.getAuthorId())
+                    .actorId(userId)
+                    .actorName(userName)
+                    .content(type.name())
+                    .build());
+        }
     }
 
     private Post findPostById(String postId) {
         return postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found: " + postId));
+    }
+
+
+    public Page<PostResponse> getPostsByHashtag(String hashtag, String userId,
+                                                int page, int size) {
+        return postRepository
+                .findByHashtag(hashtag, PageRequest.of(page, size))
+                .map(post -> buildPostResponse(post, userId));
+    }
+
+    public List<String> getTrendingHashtags() {
+        // Get top 10 hashtags from last 7 days
+        return postRepository.findTrendingHashtags(
+                LocalDateTime.now().minusDays(7),
+                PageRequest.of(0, 10)
+        );
     }
 }

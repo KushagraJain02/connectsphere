@@ -8,6 +8,8 @@ import { Heart, MessageCircle, Trash2, Share2 } from 'lucide-react';
 import { timeAgo } from '../../utils/helpers';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
+import ReactionButton from './ReactionButton';
+import HashtagText from './HashtagText';
 
 const PostCard = ({ post, queryKey = ['feed'] }) => {
   const { user } = useAuthStore();
@@ -66,14 +68,11 @@ const PostCard = ({ post, queryKey = ['feed'] }) => {
 
       {/* Content */}
       <Link to={`/post/${post.id}`} style={{ textDecoration: 'none' }}>
-        <p style={{
-          marginTop: 14, fontSize: 14, color: 'var(--text-primary)',
-          lineHeight: 1.8, whiteSpace: 'pre-line', cursor: 'pointer',
-        }}>
-          {post.content.length > 300
-            ? post.content.slice(0, 300) + '... see more'
-            : post.content}
-        </p>
+        <HashtagText
+    content={post.content.length > 300
+        ? post.content.slice(0, 300) + '...'
+        : post.content}
+/>
       </Link>
       {post.imageUrl && (
         <img src={post.imageUrl} alt="post"
@@ -99,12 +98,7 @@ const PostCard = ({ post, queryKey = ['feed'] }) => {
 
       {/* Actions */}
       <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
-        <button className="btn-ghost"
-          style={{ color: post.likedByMe ? 'var(--accent)' : 'var(--text-muted)', flex: 1, justifyContent: 'center' }}
-          onClick={() => likeMutation.mutate()}>
-          <Heart size={15} style={{ fill: post.likedByMe ? 'var(--accent)' : 'transparent', color: post.likedByMe ? 'var(--accent)' : 'inherit' }} />
-          Like
-        </button>
+        <ReactionButton post={post} queryKey={queryKey} />
         <button className="btn-ghost"
           style={{ flex: 1, justifyContent: 'center' }}
           onClick={() => setShowComments(!showComments)}>

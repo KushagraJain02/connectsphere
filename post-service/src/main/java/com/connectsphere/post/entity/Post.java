@@ -3,6 +3,9 @@ package com.connectsphere.post.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
+import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
@@ -36,6 +39,13 @@ public class Post {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+
+    // Add inside Post entity class
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "post_hashtags", joinColumns = @JoinColumn(name = "post_id"))
+    @Column(name = "hashtag")
+    private List<String> hashtags = new ArrayList<>();
 
     @PrePersist
     public void prePersist() {
