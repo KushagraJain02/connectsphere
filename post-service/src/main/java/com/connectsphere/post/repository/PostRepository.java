@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface PostRepository extends JpaRepository<Post, String> {
@@ -28,4 +29,16 @@ public interface PostRepository extends JpaRepository<Post, String> {
     @Transactional
     @Query("UPDATE Post p SET p.commentCount = p.commentCount + 1 WHERE p.id = :postId")
     void incrementCommentCount(String postId);
+
+    // Add to PostRepository.java
+    @Query("SELECT DISTINCT p FROM Post p JOIN p.hashtags h " +
+            "WHERE LOWER(h) = LOWER(:hashtag) " +
+            "ORDER BY p.createdAt DESC")
+    Page<Post> findByHashtag(String hashtag, Pageable pageable);
+
+
+    @Query("SELECT h, COUNT(h) as cnt FROM Post p JOIN p.hashtags h " +
+            "WHERE p.createdAt >= :since " +
+            "GROUP BY h ORDER BY cnt DESC")
+    List<String> findTrendingHashtags(LocalDateTime since, Pageable pageable);
 }

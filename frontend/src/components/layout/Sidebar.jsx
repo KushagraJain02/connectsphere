@@ -11,6 +11,10 @@ import {
   LayoutDashboard,
 } from 'lucide-react';
 
+import { getTrendingHashtags } from '../../api/postApi';
+import { Hash } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+
 // ─── Single Nav Link ───────────────────────────────────────
 const NavLink = ({ to, icon: Icon, label, badge }) => {
   const location = useLocation();
@@ -74,6 +78,7 @@ const NavLink = ({ to, icon: Icon, label, badge }) => {
 const Sidebar = () => {
   const { user } = useAuthStore();
   const isRecruiter = user?.role === 'RECRUITER';
+  const navigate = useNavigate();
 
   const { data: profile } = useQuery({
     queryKey: ['myProfile'],
@@ -94,6 +99,12 @@ const Sidebar = () => {
     queryFn: () => getMyConnections().then(r => r.data),
     enabled: !!user,
     staleTime: 60000,
+  });
+
+  const { data: trendingHashtags } = useQuery({
+    queryKey: ['trendingHashtags'],
+    queryFn: () => getTrendingHashtags().then(r => r.data),
+    staleTime: 300000, // 5 minutes
   });
 
   return (
@@ -245,6 +256,42 @@ const Sidebar = () => {
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Trending Hashtags ───────────────────────────── */}
+      {trendingHashtags?.length > 0 && (
+        <div style={{
+          background: 'var(--bg-surface)',
+          border: '1px solid var(--border)',
+          borderRadius: 'var(--radius-md)',
+          padding: 14,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <Hash size={13} style={{ color: 'var(--accent)' }} />
+            <p style={{
+              fontSize: 10, fontWeight: 700,
+              color: 'var(--text-muted)',
+              textTransform: 'uppercase', letterSpacing: '0.5px',
+            }}>
+              Trending
+            </p>
+          </div>
+          {trendingHashtags.map(tag => (
+            <div
+              key={tag}
+              onClick={() => navigate(`/hashtag/${tag}`)}
+              style={{
+                padding: '6px 0', cursor: 'pointer',
+                fontSize: 13, color: 'var(--accent)',
+                fontWeight: 600, transition: 'color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--accent)'}
+            >
+              #{tag}
+            </div>
+          ))}
         </div>
       )}
 

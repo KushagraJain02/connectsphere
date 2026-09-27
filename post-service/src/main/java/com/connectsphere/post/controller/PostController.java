@@ -2,6 +2,7 @@ package com.connectsphere.post.controller;
 
 import com.connectsphere.post.dto.*;
 import com.connectsphere.post.service.PostService;
+import com.connectsphere.post.service.ReactionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,6 +18,7 @@ import java.util.List;
 public class PostController {
 
     private final PostService postService;
+    private final ReactionService reactionService;
 
     @PostMapping
     public ResponseEntity<PostResponse> createPost(
@@ -89,5 +91,37 @@ public class PostController {
             @RequestHeader("X-User-Id") String userId) throws Exception {
         postService.deletePost(postId, userId);
         return ResponseEntity.ok("Post deleted successfully");
+    }
+
+
+    @PostMapping("/{postId}/react")
+    public ResponseEntity<ReactionResponse> react(
+            @PathVariable String postId,
+            @RequestParam String type,
+            @RequestHeader("X-User-Id") String userId,
+            @RequestHeader("X-User-Name") String userName) {
+        return ResponseEntity.ok(reactionService.toggleReaction(postId, userId, userName, type));
+    }
+
+    @GetMapping("/{postId}/reactions")
+    public ResponseEntity<ReactionResponse> getReactions(
+            @PathVariable String postId,
+            @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(reactionService.getReactions(postId, userId));
+    }
+
+
+    // Add to PostController.java
+    @GetMapping("/hashtag/{tag}")
+    public ResponseEntity<Page<PostResponse>> getByHashtag(
+            @PathVariable String tag,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(postService.getPostsByHashtag(tag, userId, page, 10));
+    }
+
+    @GetMapping("/trending-hashtags")
+    public ResponseEntity<List<String>> getTrendingHashtags() {
+        return ResponseEntity.ok(postService.getTrendingHashtags());
     }
 }
